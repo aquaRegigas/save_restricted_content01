@@ -3,7 +3,7 @@ services:
     name: Save Restricted Content
     runtime: python
     region: singapore
-    branch: master
+    branch: edit
     rootDir: .
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn web.app:app & python3 -m worker
