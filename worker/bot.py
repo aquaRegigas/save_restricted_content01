@@ -4,6 +4,7 @@ from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired, UsernameN
 import time
 import os
 import threading
+from datetime import datetime, timedelta
 
 bot_token = os.getenv("BOT_TOKEN") 
 api_hash = os.getenv("API_HASH") 
@@ -12,13 +13,15 @@ ss = os.getenv("STRING")
 channel_id = int(os.getenv("CHANNEL_ID"))
 channel_name = os.getenv("CHANNEL_NAME")
 
-
 bot = Client("mybot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
 if ss is not None:
 	acc = Client("myacc" ,api_id=api_id, api_hash=api_hash, session_string=ss)
 	acc.start()
 else: acc = None
+
+# User cooldown dictionary
+user_cooldown = {}
 
 # download status
 def downstatus(statusfile,message):
@@ -89,6 +92,13 @@ def save(client: pyrogram.client.Client, message: pyrogram.types.messages_and_me
 		set_flag = False
 
 	if set_flag:
+		# Check if user is in cooldown
+		if user_id in user_cooldown:
+			cooldown_remaining = user_cooldown[user_id] - datetime.now()
+			if cooldown_remaining > timedelta(0):
+				bot.send_message(message.chat.id, f"⏱️ You have to wait for {str(cooldown_remaining).split('.')[0]} before requesting another file.", reply_to_message_id=message.id)
+				return
+
 		# joining chats
 		if "https://t.me/+" in message.text or "https://t.me/joinchat/" in message.text:
 
@@ -160,9 +170,13 @@ def save(client: pyrogram.client.Client, message: pyrogram.types.messages_and_me
 				# wait time
 				time.sleep(3)
 
+			# Add user to cooldown
+			user_cooldown[user_id] = datetime.now() + timedelta(minutes=15)
+
 	else:
 		bot.send_message(message.chat.id, f"__👋 Hi **{message.from_user.mention}**, I am Save Restricted Bot\nPlease join our channel @{channel_name} to use",
 				   reply_to_message_id=message.id)
+
 # handle private
 def handle_private(message: pyrogram.types.messages_and_media.message.Message, chatid: int, msgid: int):
 		msg: pyrogram.types.messages_and_media.message.Message = acc.get_messages(chatid,msgid)
